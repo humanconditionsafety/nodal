@@ -1,18 +1,16 @@
-'use strict';
+'use strict'
 
-const Nodal = require('nodal');
+const Nodal = require('nodal')
 
 class AuthController extends Nodal.Controller {
 
-  authorize(callback) {
+  authorize (callback) {
+    this.setHeader('Cache-Control', 'no-store')
+    this.setHeader('Pragma', 'no-cache')
 
-    this.setHeader('Cache-Control', 'no-store');
-    this.setHeader('Pragma', 'no-cache');
-
-    callback(null);
-
+    callback(null)
   }
 
 }
 
-module.exports = AuthController;
+module.exports = AuthController

@@ -1,34 +1,28 @@
-'use strict';
+'use strict'
 
-const Command = require('cmnd').Command;
+const Command = require('cmnd').Command
 
 class DBDropCommand extends Command {
 
-  constructor() {
-
-    super('db', 'drop');
-
+  constructor () {
+    super('db', 'drop')
   }
 
-  help() {
-
+  help () {
     return {
       description: 'drops the currently active database'
-    };
-
+    }
   }
 
-  run(params, callback) {
-
+  run (params, callback) {
     if (params.vflags.env) {
-      process.env.NODE_ENV = params.vflags.env[0];
+      process.env.NODE_ENV = params.vflags.env[0]
     }
 
-    const bootstrapper = require('../../../core/my/bootstrapper.js');
-    bootstrapper.drop(callback);
-
+    const bootstrapper = require('../../../core/my/bootstrapper.js')
+    bootstrapper.drop(callback)
   }
 
 }
 
-module.exports = DBDropCommand;
+module.exports = DBDropCommand

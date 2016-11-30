@@ -1,7 +1,7 @@
-'use strict';
+'use strict'
 
-const fxn = require('fxn');
+const fxn = require('fxn')
 
 class Router extends fxn.Router {}
 
-module.exports = Router;
+module.exports = Router

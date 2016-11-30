@@ -1,7 +1,7 @@
-'use strict';
+'use strict'
 
-const fxn = require('fxn');
-const API = require('./api.js');
+const fxn = require('fxn')
+const API = require('./api.js')
 
 class Controller extends fxn.Controller {
 
@@ -9,9 +9,9 @@ class Controller extends fxn.Controller {
   * Set HTTP status code for this response. If OPTIONS mode, default to 200.
   * @param {Number} code
   */
-  status(value) {
-    super.status(this._method === 'OPTIONS' ? 200 : value);
-    return true;
+  status (value) {
+    super.status(this._method === 'OPTIONS' ? 200 : value)
+    return true
   }
 
   /**
@@ -20,10 +20,10 @@ class Controller extends fxn.Controller {
   * @param {Object} details Any additional details for the error (must be serializable)
   * @return {boolean}
   */
-  badRequest(msg, details) {
-    this.status(400);
-    this.render(API.error(msg || 'Bad Request', details));
-    return true;
+  badRequest (msg, details) {
+    this.status(400)
+    this.render(API.error(msg || 'Bad Request', details))
+    return true
   }
 
   /**
@@ -32,10 +32,10 @@ class Controller extends fxn.Controller {
   * @param {Object} details Any additional details for the error (must be serializable)
   * @return {boolean}
   */
-  unauthorized(msg, details) {
-    this.status(401);
-    this.render(API.error(msg || 'Unauthorized', details));
-    return true;
+  unauthorized (msg, details) {
+    this.status(401)
+    this.render(API.error(msg || 'Unauthorized', details))
+    return true
   }
 
   /**
@@ -44,10 +44,10 @@ class Controller extends fxn.Controller {
   * @param {Object} details Any additional details for the error (must be serializable)
   * @return {boolean}
   */
-  notFound(msg, details) {
-    this.status(404);
-    this.render(API.error(msg || 'Not Found', details));
-    return true;
+  notFound (msg, details) {
+    this.status(404)
+    this.render(API.error(msg || 'Not Found', details))
+    return true
   }
 
   /**
@@ -56,10 +56,10 @@ class Controller extends fxn.Controller {
   * @param {Object} details Any additional details for the error (must be serializable)
   * @return {boolean}
   */
-  notImplemented(msg, details) {
-    this.status(501);
-    this.render(API.error(msg  || 'Not Implemented', details));
-    return true;
+  notImplemented (msg, details) {
+    this.status(501)
+    this.render(API.error(msg || 'Not Implemented', details))
+    return true
   }
 
   /**
@@ -68,10 +68,10 @@ class Controller extends fxn.Controller {
   * @param {Object} details Any additional details for the error (must be serializable)
   * @return {boolean}
   */
-  tooManyRequests(msg, details) {
-    this.status(429);
-    this.render(API.error(msg || 'Too Many Requests', details));
-    return true;
+  tooManyRequests (msg, details) {
+    this.status(429)
+    this.render(API.error(msg || 'Too Many Requests', details))
+    return true
   }
 
   /**
@@ -80,10 +80,10 @@ class Controller extends fxn.Controller {
   * @param {Object} details Any additional details for the error (must be serializable)
   * @return {boolean}
   */
-  error(msg, details) {
-    this.status(500);
-    this.render(API.error(msg || 'Internal Server Error', details));
-    return true;
+  error (msg, details) {
+    this.status(500)
+    this.render(API.error(msg || 'Internal Server Error', details))
+    return true
   }
 
   /**
@@ -92,23 +92,19 @@ class Controller extends fxn.Controller {
   * @param {optional Array} The interface to use for the data being returned, if not an error.
   * @return {boolean}
   */
-  respond(data, arrInterface) {
-
+  respond (data, arrInterface) {
     if (data instanceof Error) {
-
       if (data.notFound) {
-        return this.notFound(data.message, data.details);
+        return this.notFound(data.message, data.details)
       }
 
-      return this.badRequest(data.message, data.details);
-
+      return this.badRequest(data.message, data.details)
     }
 
-    this.render(API.format(data, arrInterface));
-    return true;
-
+    this.render(API.format(data, arrInterface))
+    return true
   }
 
 }
 
-module.exports = Controller;
+module.exports = Controller

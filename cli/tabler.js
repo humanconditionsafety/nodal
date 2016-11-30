@@ -1,11 +1,10 @@
-'use strict';
+'use strict'
 
 module.exports = (fields, objects) => {
-
   let sizes = fields.map(f => {
-    let rowSizes = [f.length].concat(objects.map(o => o[f].toString().length));
-    return Math.max.apply(null, rowSizes);
-  });
+    let rowSizes = [f.length].concat(objects.map(o => o[f].toString().length))
+    return Math.max.apply(null, rowSizes)
+  })
 
   return [
     fields.map((f, i) => ' ' + f + Array(sizes[i] - f.length + 1).join(' ') + ' ').join('|'),
@@ -13,10 +12,9 @@ module.exports = (fields, objects) => {
   ].concat(
     objects.map(o => {
       return fields.map((f, i) => {
-        let val = o[f].toString();
+        let val = o[f].toString()
         return ' ' + val + Array(sizes[i] - val.length + 1).join(' ') + ' '
       }).join('|')
     })
-  ).join('\n');
-
-};
+  ).join('\n')
+}

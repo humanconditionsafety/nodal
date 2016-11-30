@@ -1,8 +1,8 @@
-'use strict';
+'use strict'
 
-const Nodal = require('nodal');
-const db = new Nodal.Database();
+const Nodal = require('nodal')
+const db = new Nodal.Database()
 
-db.connect(Nodal.my.Config.db.main);
+db.connect(Nodal.my.Config.db.main)
 
-module.exports = db;
+module.exports = db

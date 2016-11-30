@@ -1,89 +1,81 @@
-'use strict';
+'use strict'
 
-const Command = require('cmnd').Command;
+const Command = require('cmnd').Command
 
-const fs = require('fs');
+const fs = require('fs')
 
-const colors = require('colors/safe');
-const inflect = require('i')();
+const colors = require('colors/safe')
+const inflect = require('i')()
 
-const dot = require('dot');
+const dot = require('dot')
 
 let templateSettings = Object.keys(dot.templateSettings).reduce((o, k) => {
-  o[k] = dot.templateSettings[k];
-  return o;
+  o[k] = dot.templateSettings[k]
+  return o
 }, {})
-templateSettings.strip = false;
-templateSettings.varname = 'data';
+templateSettings.strip = false
+templateSettings.varname = 'data'
 
-let taskDir = './tasks';
+let taskDir = './tasks'
 
-function generateTask(taskName) {
-
+function generateTask (taskName) {
   let task = {
-    name: taskName,
-  };
+    name: taskName
+  }
 
   var fn = dot.template(
     fs.readFileSync(__dirname + '/../../templates/task.jst').toString(),
     templateSettings
-  );
+  )
 
-  return fn(task);
-
+  return fn(task)
 }
 
 class GenerateTaskCommand extends Command {
 
-  constructor() {
-
-    super('g', 'task');
-
+  constructor () {
+    super('g', 'task')
   }
 
-  help() {
-
+  help () {
     return {
       description: 'Generates a new task',
       args: ['task name']
-    };
-
+    }
   }
 
-  run(params, callback) {
-
+  run (params, callback) {
     if (!params.args.length) {
-      return callback(new Error('No task path specified.'));
+      return callback(new Error('No task path specified.'))
     }
 
-    let taskPath = params.args[0].split('/');
+    let taskPath = params.args[0].split('/')
     let cd = taskPath
 
-    let taskName = inflect.classify(taskPath.pop());
+    let taskName = inflect.classify(taskPath.pop())
 
-    taskPath = taskPath.map(function(v) {
-      return inflect.underscore(v);
-    });
+    taskPath = taskPath.map(function (v) {
+      return inflect.underscore(v)
+    })
 
-    let createPath = [taskDir].concat(taskPath).join('/') + '/' + inflect.underscore(taskName) + '.js';
+    let createPath = [taskDir].concat(taskPath).join('/') + '/' + inflect.underscore(taskName) + '.js'
 
     if (fs.existsSync(createPath)) {
-      return callback(new Error('task already exists'));
+      return callback(new Error('task already exists'))
     }
 
     while (taskPath.length && (cd += '/' + taskPath.shift()) && !fs.existsSync(cd)) {
-      fs.mkdirSync(cd);
-      cd += '/' + taskPath.shift();
+      fs.mkdirSync(cd)
+      cd += '/' + taskPath.shift()
     }
 
-    fs.writeFileSync(createPath, generateTask(taskName));
+    fs.writeFileSync(createPath, generateTask(taskName))
 
-    console.log(colors.green.bold('Create: ') + createPath);
+    console.log(colors.green.bold('Create: ') + createPath)
 
-    callback(null);
-
+    callback(null)
   }
 
 }
 
-module.exports = GenerateTaskCommand;
+module.exports = GenerateTaskCommand

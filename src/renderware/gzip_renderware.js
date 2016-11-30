@@ -1,15 +1,14 @@
-'use strict';
+'use strict'
 
-const Nodal = require('nodal');
-const zlib = require('zlib');
+const Nodal = require('nodal')
+const zlib = require('zlib')
 
 class GzipRenderware {
 
-  exec(controller, data, callback) {
+  exec (controller, data, callback) {
+    let contentType = controller.getHeader('Content-Type', '').split(';')[0]
 
-    let contentType = controller.getHeader('Content-Type', '').split(';')[0];
-
-    let acceptEncoding = controller._requestHeaders['accept-encoding'] || '';
+    let acceptEncoding = controller._requestHeaders['accept-encoding'] || ''
     let canCompress = !!{
       'text/plain': 1,
       'text/html': 1,
@@ -20,44 +19,37 @@ class GzipRenderware {
       'application/xml': 1,
       'application/javascript': 1,
       'application/octet-stream': 1
-    }[contentType];
+    }[contentType]
 
     if (canCompress) {
-
       if (acceptEncoding.match(/\bgzip\b/)) {
-
-        zlib.gzip(data, function(err, result) {
+        zlib.gzip(data, function (err, result) {
           if (!err) {
-            controller.setHeader('Content-Encoding', 'gzip');
-            callback(null, result);
-            return;
+            controller.setHeader('Content-Encoding', 'gzip')
+            callback(null, result)
+            return
           }
-          callback(null, data);
-        });
+          callback(null, data)
+        })
 
-        return true;
-
-      } else if(acceptEncoding.match(/\bdeflate\b/)) {
-
-        zlib.deflate(data, function(err, result) {
+        return true
+      } else if (acceptEncoding.match(/\bdeflate\b/)) {
+        zlib.deflate(data, function (err, result) {
           if (!err) {
-            controller.setHeader('Content-Encoding', 'deflate');
-            callback(null, result);
-            return;
+            controller.setHeader('Content-Encoding', 'deflate')
+            callback(null, result)
+            return
           }
-          callback(null, data);
-        });
-        return true;
-
+          callback(null, data)
+        })
+        return true
       }
-
     }
 
-    callback(null, data);
-    return false;
-
+    callback(null, data)
+    return false
   }
 
 }
 
-module.exports = GzipRenderware;
+module.exports = GzipRenderware

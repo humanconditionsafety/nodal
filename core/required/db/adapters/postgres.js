@@ -1,224 +1,185 @@
-'use strict';
+'use strict'
 
-const inflect = require('i')();
-const SQLAdapter = require('../sql_adapter.js');
-const utilities = require('../../utilities.js');
+const inflect = require('i')()
+const SQLAdapter = require('../sql_adapter.js')
+const utilities = require('../../utilities.js')
 
-const async = require('async');
+const async = require('async')
 
-const pg = require('pg');
-pg.defaults.poolSize = 8;
+const pg = require('pg')
+pg.defaults.poolSize = 8
 
 class PostgresAdapter extends SQLAdapter {
 
-  constructor(db, cfg) {
+  constructor (db, cfg) {
+    super()
 
-    super();
+    cfg = cfg.connectionString ? this.parseConnectionString(cfg.connectionString) : cfg
 
-    cfg = cfg.connectionString ? this.parseConnectionString(cfg.connectionString) : cfg;
-
-    this.db = db;
-    this._config = cfg;
-
+    this.db = db
+    this._config = cfg
   }
 
-  close() {
-
-    pg.end();
-
+  close () {
+    pg.end()
   }
 
-  query(query, params, callback) {
-
+  query (query, params, callback) {
     if (arguments.length < 3) {
-      throw new Error('.query requires 3 arguments');
+      throw new Error('.query requires 3 arguments')
     }
 
     if (!(params instanceof Array)) {
-      throw new Error('params must be a valid array');
+      throw new Error('params must be a valid array')
     }
 
-    if(typeof callback !== 'function') {
-      throw new Error('Callback must be a function');
+    if (typeof callback !== 'function') {
+      throw new Error('Callback must be a function')
     }
 
-    let start = new Date().valueOf();
-    let log = this.db.log.bind(this.db);
+    let start = new Date().valueOf()
+    let log = this.db.log.bind(this.db)
 
     pg.connect(this._config, (err, client, complete) => {
-
       if (err) {
-        this.db.error(err.message);
-        return complete();
+        this.db.error(err.message)
+        return complete()
       }
 
-      client.query(query, params, (function () {
+      client.query(query, params, function () {
+        log(query, params, new Date().valueOf() - start)
+        complete()
+        callback.apply(this, arguments)
+      }.bind(this))
+    })
 
-        log(query, params, new Date().valueOf() - start);
-        complete();
-        callback.apply(this, arguments);
-
-      }).bind(this));
-
-    });
-
-    return true;
-
+    return true
   }
 
-  transaction(preparedArray, callback) {
-
+  transaction (preparedArray, callback) {
     if (!preparedArray.length) {
-      throw new Error('Must give valid array of statements (with or without parameters)');
+      throw new Error('Must give valid array of statements (with or without parameters)')
     }
 
     if (typeof preparedArray === 'string') {
-      preparedArray = preparedArray.split(';').filter(function(v) {
-        return !!v;
-      }).map(function(v) {
-        return [v];
-      });
+      preparedArray = preparedArray.split(';').filter(function (v) {
+        return !!v
+      }).map(function (v) {
+        return [v]
+      })
     }
 
-    if(typeof callback !== 'function') {
-      callback = function() {};
+    if (typeof callback !== 'function') {
+      callback = function () {}
     }
 
-    let start = new Date().valueOf();
+    let start = new Date().valueOf()
 
     pg.connect(this._config, (err, client, complete) => {
-
       if (err) {
-        this.db.error(err.message);
-        callback(err);
-        return complete();
+        this.db.error(err.message)
+        callback(err)
+        return complete()
       }
 
       let queries = preparedArray.map(queryData => {
-
-        let query = queryData[0];
-        let params = queryData[1] || [];
+        let query = queryData[0]
+        let params = queryData[1] || []
 
         return (callback) => {
-          this.db.log(query, params, new Date().valueOf() - start);
-          client.query(queryData[0], queryData[1], callback);
-        };
-
-      });
+          this.db.log(query, params, new Date().valueOf() - start)
+          client.query(queryData[0], queryData[1], callback)
+        }
+      })
 
       queries = [].concat(
         (callback) => {
-          client.query('BEGIN', callback);
+          client.query('BEGIN', callback)
         },
         queries
-      );
+      )
 
-      this.db.info('Transaction started...');
+      this.db.info('Transaction started...')
 
       async.series(queries, (txnErr, results) => {
-
         if (txnErr) {
-
-          this.db.error(txnErr.message);
-          this.db.info('Rollback started...');
+          this.db.error(txnErr.message)
+          this.db.info('Rollback started...')
 
           client.query('ROLLBACK', (err) => {
-
             if (err) {
-              this.db.error(`Rollback failed - ${err.message}`);
-              this.db.info('Transaction complete!');
-              complete();
-              callback(err);
+              this.db.error(`Rollback failed - ${err.message}`)
+              this.db.info('Transaction complete!')
+              complete()
+              callback(err)
             } else {
               this.db.info('Rollback complete!')
-              this.db.info('Transaction complete!');
-              complete();
-              callback(txnErr);
+              this.db.info('Transaction complete!')
+              complete()
+              callback(txnErr)
             };
-
-          });
-
+          })
         } else {
-
-          this.db.info('Commit started...');
+          this.db.info('Commit started...')
 
           client.query('COMMIT', (err) => {
-
             if (err) {
-              this.db.error(`Commit failed - ${err.message}`);
-              this.db.info('Transaction complete!');
-              complete();
-              callback(err);
-              return;
+              this.db.error(`Commit failed - ${err.message}`)
+              this.db.info('Transaction complete!')
+              complete()
+              callback(err)
+              return
             }
 
             this.db.info('Commit complete!')
-            this.db.info('Transaction complete!');
-            complete();
-            callback(null, results);
-
-          });
-
+            this.db.info('Transaction complete!')
+            complete()
+            callback(null, results)
+          })
         }
-
-      });
-
-    });
-
+      })
+    })
   }
 
   /* Command functions... */
 
-  drop(databaseName, callback) {
-
+  drop (databaseName, callback) {
     this.query(this.generateDropDatabaseQuery(databaseName), [], (err, result) => {
-
       if (err) {
-        return callback(err);
+        return callback(err)
       }
 
-      this.db.info(`Dropped database "${databaseName}"`);
-      callback(null);
-
-    });
-
+      this.db.info(`Dropped database "${databaseName}"`)
+      callback(null)
+    })
   }
 
-  create(databaseName, callback) {
-
+  create (databaseName, callback) {
     this.query(this.generateCreateDatabaseQuery(databaseName), [], (err, result) => {
-
       if (err) {
-        return callback(err);
+        return callback(err)
       }
 
-      this.db.info(`Created empty database "${databaseName}"`);
-      callback(null);
-
-    });
-
+      this.db.info(`Created empty database "${databaseName}"`)
+      callback(null)
+    })
   }
 
   /* generate functions */
 
-  generateArray(arr) {
-
-    return '{' + arr.join(',') + '}';
-
+  generateArray (arr) {
+    return '{' + arr.join(',') + '}'
   }
 
-  generateConnectionString(host, port, database, user, password) {
-
+  generateConnectionString (host, port, database, user, password) {
     if (!host || !port || !database) {
-      return '';
+      return ''
     }
 
-    return 'postgres://' + user + ':' + password + '@' + host + ':' + port + '/' + database;
-
+    return 'postgres://' + user + ':' + password + '@' + host + ':' + port + '/' + database
   }
 
-  parseConnectionString(str) {
-
+  parseConnectionString (str) {
     let cfg = {
       host: '',
       database: '',
@@ -226,449 +187,395 @@ class PostgresAdapter extends SQLAdapter {
       password: '',
       port: 5432,
       ssl: false
-    };
-
-    let match = str.match(/^postgres:\/\/([A-Za-z0-9_]+)(?:\:([A-Za-z0-9_\-]+))?@([A-Za-z0-9_\.\-]+):(\d+)\/([A-Za-z0-9_]+)$/);
-
-    if (match) {
-      cfg.user = match[1];
-      cfg.password = match[2];
-      cfg.host = match[3];
-      cfg.port = match[4];
-      cfg.database = match[5];
     }
 
-    return cfg;
+    let match = str.match(/^postgres:\/\/([A-Za-z0-9_]+)(?:\:([A-Za-z0-9_\-]+))?@([A-Za-z0-9_\.\-]+):(\d+)\/([A-Za-z0-9_]+)$/)
 
+    if (match) {
+      cfg.user = match[1]
+      cfg.password = match[2]
+      cfg.host = match[3]
+      cfg.port = match[4]
+      cfg.database = match[5]
+    }
+
+    return cfg
   }
 
-  generateClearDatabaseQuery() {
-
+  generateClearDatabaseQuery () {
     return [
       'DROP SCHEMA public CASCADE',
       'CREATE SCHEMA public'
     ].join(';')
-
   }
 
-  generateCreateDatabaseQuery(name) {
-
+  generateCreateDatabaseQuery (name) {
     return [
       'CREATE DATABASE',
       this.escapeField(name)
-    ].join(' ');
-
+    ].join(' ')
   }
 
-  generateDropDatabaseQuery(name) {
-
+  generateDropDatabaseQuery (name) {
     return [
       'DROP DATABASE IF EXISTS',
       this.escapeField(name)
-    ].join(' ');
-
+    ].join(' ')
   }
 
-  generateColumn(columnName, columnType, columnProperties) {
-
+  generateColumn (columnName, columnType, columnProperties) {
     return [
       this.escapeField(columnName),
       columnType,
       columnProperties.array ? 'ARRAY' : '',
       (columnProperties.primary_key || !columnProperties.nullable) ? 'NOT NULL' : ''
-    ].filter(function(v) { return !!v; }).join(' ');
-
+    ].filter(function (v) { return !!v }).join(' ')
   }
 
-  generateAlterColumn(columnName, columnType, columnProperties) {
-
+  generateAlterColumn (columnName, columnType, columnProperties) {
     return [
       'ALTER COLUMN',
       this.escapeField(columnName),
       'TYPE',
       columnType,
-      columnProperties.array ? 'ARRAY' : '',
-    ].filter(function(v) { return !!v; }).join(' ');
-
+      columnProperties.array ? 'ARRAY' : ''
+    ].filter(function (v) { return !!v }).join(' ')
   }
 
-  generateAlterColumnSetNull(columnName, columnType, columnProperties) {
-
+  generateAlterColumnSetNull (columnName, columnType, columnProperties) {
     return [
       'ALTER COLUMN',
       this.escapeField(columnName),
       (columnProperties.primary_key || !columnProperties.nullable) ? 'SET' : 'DROP',
       'NOT NULL'
-    ].join(' ');
-
+    ].join(' ')
   }
 
-  generateAlterColumnDropDefault(columnName, columnType, columnProperties) {
-
+  generateAlterColumnDropDefault (columnName, columnType, columnProperties) {
     return [
       'ALTER COLUMN',
       this.escapeField(columnName),
       'DROP DEFAULT'
-    ].join(' ');
-
+    ].join(' ')
   }
 
-  generateAlterColumnSetDefaultSeq(columnName, seqName) {
+  generateAlterColumnSetDefaultSeq (columnName, seqName) {
     return [
       'ALTER COLUMN ',
-        this.escapeField(columnName),
+      this.escapeField(columnName),
       ' SET DEFAULT nextval(\'',
-        seqName,
+      seqName,
       '\')'
-    ].join('');
+    ].join('')
   }
 
-  generateIndex(table, columnName) {
-
-    return this.generateConstraint(table, columnName, 'index');
-
+  generateIndex (table, columnName) {
+    return this.generateConstraint(table, columnName, 'index')
   }
 
-  generateConstraint(table, columnName, suffix) {
-    return this.escapeField([table, columnName, suffix].join('_'));
+  generateConstraint (table, columnName, suffix) {
+    return this.escapeField([table, columnName, suffix].join('_'))
   }
 
-  generatePrimaryKey(table, columnName) {
-
-    return ['CONSTRAINT ', this.generateConstraint(table, columnName, 'pk'), ' PRIMARY KEY(', this.escapeField(columnName), ')'].join('');
-
+  generatePrimaryKey (table, columnName) {
+    return ['CONSTRAINT ', this.generateConstraint(table, columnName, 'pk'), ' PRIMARY KEY(', this.escapeField(columnName), ')'].join('')
   }
 
-  generateUniqueKey(table, columnName) {
-
-    return ['CONSTRAINT ', this.generateConstraint(table, columnName, 'unique'), ' UNIQUE(', this.escapeField(columnName), ')'].join('');
-
+  generateUniqueKey (table, columnName) {
+    return ['CONSTRAINT ', this.generateConstraint(table, columnName, 'unique'), ' UNIQUE(', this.escapeField(columnName), ')'].join('')
   }
 
-  generateAlterTableRename(table, newTableName, columns) {
-
-    let self = this;
+  generateAlterTableRename (table, newTableName, columns) {
+    let self = this
 
     return [
       [
         'ALTER TABLE',
-          this.escapeField(table),
+        this.escapeField(table),
         'RENAME TO',
-          this.escapeField(newTableName)
-      ].join(' '),
+        this.escapeField(newTableName)
+      ].join(' ')
     ].concat(
-      this.getPrimaryKeys(columns).map(function(columnData) {
+      this.getPrimaryKeys(columns).map(function (columnData) {
         return [
           'ALTER TABLE',
-            self.escapeField(newTableName),
+          self.escapeField(newTableName),
           'RENAME CONSTRAINT',
-            self.generateConstraint(table, columnData.name, 'pk'),
+          self.generateConstraint(table, columnData.name, 'pk'),
           'TO',
-            self.generateConstraint(newTableName, columnData.name, 'pk')
-        ].join(' ');
+          self.generateConstraint(newTableName, columnData.name, 'pk')
+        ].join(' ')
       }),
-      this.getUniqueKeys(columns).map(function(columnData) {
+      this.getUniqueKeys(columns).map(function (columnData) {
         return [
           'ALTER TABLE',
-            self.escapeField(newTableName),
+          self.escapeField(newTableName),
           'RENAME CONSTRAINT',
-            self.generateConstraint(table, columnData.name, 'unique'),
+          self.generateConstraint(table, columnData.name, 'unique'),
           'TO',
-            self.generateConstraint(newTableName, columnData.name, 'unique')
-        ].join(' ');
+          self.generateConstraint(newTableName, columnData.name, 'unique')
+        ].join(' ')
       }),
-      this.getAutoIncrementKeys(columns).map(function(columnData) {
-        return self.generateRenameSequenceQuery(table, columnData.name, newTableName, columnData.name);
+      this.getAutoIncrementKeys(columns).map(function (columnData) {
+        return self.generateRenameSequenceQuery(table, columnData.name, newTableName, columnData.name)
       })
-    ).join(';');
+    ).join(';')
   }
 
-  generateAlterTableColumnType(table, columnName, columnType, columnProperties) {
-
+  generateAlterTableColumnType (table, columnName, columnType, columnProperties) {
     let queries = [
       [
-        'ALTER TABLE',
-          this.escapeField(table),
-          this.generateAlterColumn(columnName, columnType, columnProperties)
-      ].join(' '),
+      'ALTER TABLE',
+      this.escapeField(table),
+      this.generateAlterColumn(columnName, columnType, columnProperties)
+    ].join(' '),
       [
-        'ALTER TABLE',
-          this.escapeField(table),
-          this.generateAlterColumnSetNull(columnName, columnType, columnProperties)
-      ].join(' '),
+      'ALTER TABLE',
+      this.escapeField(table),
+      this.generateAlterColumnSetNull(columnName, columnType, columnProperties)
+    ].join(' '),
       [
-        'ALTER TABLE',
-          this.escapeField(table),
-          this.generateAlterColumnDropDefault(columnName)
-      ].join(' '),
+      'ALTER TABLE',
+      this.escapeField(table),
+      this.generateAlterColumnDropDefault(columnName)
+    ].join(' '),
       this.generateDropSequenceQuery(table, columnName)
     ]
 
     if (columnProperties.auto_increment) {
-      queries.push(this.generateCreateSequenceQuery(table, columnName));
+      queries.push(this.generateCreateSequenceQuery(table, columnName))
       queries.push([
         'ALTER TABLE',
-          this.escapeField(table),
-          this.generateAlterColumnSetDefaultSeq(columnName, this.generateSequence(table, columnName))
-      ].join(' '));
+        this.escapeField(table),
+        this.generateAlterColumnSetDefaultSeq(columnName, this.generateSequence(table, columnName))
+      ].join(' '))
     }
 
-    return queries.join(';');
-
+    return queries.join(';')
   }
 
-  generateAlterTableAddPrimaryKey(table, columnName) {
-
+  generateAlterTableAddPrimaryKey (table, columnName) {
     return [
       'ALTER TABLE',
-        this.escapeField(table),
+      this.escapeField(table),
       'ADD',
-        this.generatePrimaryKey(table, columnName)
-    ].join(' ');
-
+      this.generatePrimaryKey(table, columnName)
+    ].join(' ')
   }
 
-  generateAlterTableDropPrimaryKey(table, columnName) {
-
+  generateAlterTableDropPrimaryKey (table, columnName) {
     return [
       'ALTER TABLE',
-        this.escapeField(table),
+      this.escapeField(table),
       'DROP CONSTRAINT IF EXISTS',
-        this.generateConstraint(table, columnName, 'pk')
-    ].join(' ');
-
+      this.generateConstraint(table, columnName, 'pk')
+    ].join(' ')
   }
 
-  generateAlterTableAddUniqueKey(table, columnName) {
-
+  generateAlterTableAddUniqueKey (table, columnName) {
     return [
       'ALTER TABLE',
-        this.escapeField(table),
+      this.escapeField(table),
       'ADD',
-        this.generateUniqueKey(table, columnName)
-    ].join(' ');
-
+      this.generateUniqueKey(table, columnName)
+    ].join(' ')
   }
 
-  generateAlterTableDropUniqueKey(table, columnName) {
-
+  generateAlterTableDropUniqueKey (table, columnName) {
     return [
       'ALTER TABLE',
-        this.escapeField(table),
+      this.escapeField(table),
       'DROP CONSTRAINT IF EXISTS',
-        this.generateConstraint(table, columnName, 'unique')
-    ].join(' ');
-
+      this.generateConstraint(table, columnName, 'unique')
+    ].join(' ')
   }
 
-  generateAlterTableAddColumn(table, columnName, columnType, columnProperties) {
-
+  generateAlterTableAddColumn (table, columnName, columnType, columnProperties) {
     return [
       'ALTER TABLE',
-        this.escapeField(table),
+      this.escapeField(table),
       'ADD COLUMN',
-        this.generateColumn(columnName, columnType, columnProperties)
-    ].join(' ');
-
+      this.generateColumn(columnName, columnType, columnProperties)
+    ].join(' ')
   }
 
-  generateAlterTableDropColumn(table, columnName) {
-
+  generateAlterTableDropColumn (table, columnName) {
     return [
       'ALTER TABLE',
-        this.escapeField(table),
+      this.escapeField(table),
       'DROP COLUMN IF EXISTS',
-        this.escapeField(columnName)
-    ].join(' ');
-
+      this.escapeField(columnName)
+    ].join(' ')
   }
 
-  generateAlterTableRenameColumn(table, columnName, newColumnName) {
-
+  generateAlterTableRenameColumn (table, columnName, newColumnName) {
     return [
       'ALTER TABLE',
-        this.escapeField(table),
+      this.escapeField(table),
       'RENAME COLUMN',
-        this.escapeField(columnName),
+      this.escapeField(columnName),
       'TO',
       this.escapeField(newColumnName)
-    ].join(' ');
-
+    ].join(' ')
   }
 
-  generateCreateIndex(table, columnName, indexType) {
-
-    indexType = this.indexTypes.indexOf(indexType) > -1 ? indexType : this.indexTypes[0];
-    let indexName = columnName;
-    let usingValue = this.escapeField(columnName);
+  generateCreateIndex (table, columnName, indexType) {
+    indexType = this.indexTypes.indexOf(indexType) > -1 ? indexType : this.indexTypes[0]
+    let indexName = columnName
+    let usingValue = this.escapeField(columnName)
 
     if (columnName.indexOf(this.columnDepthDelimiter) != -1) {
       // turn ex: recipie->name into recipe_name
-      indexName = columnName.replace(new RegExp(this.columnDepthDelimiter, 'i'), '_');
-      usingValue = `(${columnName})`;
+      indexName = columnName.replace(new RegExp(this.columnDepthDelimiter, 'i'), '_')
+      usingValue = `(${columnName})`
     }
     return [
       'CREATE INDEX',
-        this.generateIndex(table, indexName),
+      this.generateIndex(table, indexName),
       'ON',
-        this.escapeField(table),
+      this.escapeField(table),
       'USING',
-        indexType,
+      indexType,
       ['(', usingValue, ')'].join('')
-    ].join(' ');
-
+    ].join(' ')
   }
 
-  generateDropIndex(table, columnName) {
-
+  generateDropIndex (table, columnName) {
     return [
       'DROP INDEX', this.generateIndex(table, columnName)
-    ].join(' ');
-
+    ].join(' ')
   }
 
-  generateSequence(table, columnName) {
-    return this.generateConstraint(table, columnName, 'seq');
+  generateSequence (table, columnName) {
+    return this.generateConstraint(table, columnName, 'seq')
   }
 
-  generateCreateSequenceQuery(table, columnName) {
-
+  generateCreateSequenceQuery (table, columnName) {
     return [
       [
         'CREATE SEQUENCE',
-          this.generateSequence(table, columnName),
+        this.generateSequence(table, columnName),
         'START 1',
         'OWNED BY',
-          [this.escapeField(table), this.escapeField(columnName)].join('.')
+        [this.escapeField(table), this.escapeField(columnName)].join('.')
       ].join(' '),
       [
         'SELECT setval(\'',
-          this.generateSequence(table, columnName),
+        this.generateSequence(table, columnName),
         '\', GREATEST(COALESCE(MAX(',
-          this.escapeField(columnName),
+        this.escapeField(columnName),
         '), 0), 0) + 1, false) FROM ',
-          this.escapeField(table)
+        this.escapeField(table)
       ].join('')
-    ].join(';');
-
+    ].join(';')
   }
 
-  generateSimpleForeignKeyQuery(table, referenceTable) {
+  generateSimpleForeignKeyQuery (table, referenceTable) {
     return [
       'ALTER TABLE',
-        this.escapeField(table),
+      this.escapeField(table),
       'ADD CONSTRAINT',
-        `${this.generateConstraint(table, referenceTable, 'id_fk')}`,
+      `${this.generateConstraint(table, referenceTable, 'id_fk')}`,
       'FOREIGN KEY',
-        `(${this.escapeField(`${inflect.singularize(referenceTable)}_id`)})`,
+      `(${this.escapeField(`${inflect.singularize(referenceTable)}_id`)})`,
       'REFERENCES',
-        `${this.escapeField(referenceTable)} (${this.escapeField('id')})`
-    ].join(' ');
-
+      `${this.escapeField(referenceTable)} (${this.escapeField('id')})`
+    ].join(' ')
   }
 
-  generateDropSimpleForeignKeyQuery(table, referenceTable) {
+  generateDropSimpleForeignKeyQuery (table, referenceTable) {
     return [
       'ALTER TABLE',
-        this.escapeField(table),
+      this.escapeField(table),
       'DROP CONSTRAINT IF EXISTS',
-        `${this.generateConstraint(table, referenceTable, 'id_fk')}`,
-    ].join(' ');
-
+      `${this.generateConstraint(table, referenceTable, 'id_fk')}`
+    ].join(' ')
   }
 
-  generateRenameSequenceQuery(table, columnName, newTable, newColumnName) {
-
+  generateRenameSequenceQuery (table, columnName, newTable, newColumnName) {
     return [
       'ALTER SEQUENCE',
-        this.generateSequence(table, columnName),
+      this.generateSequence(table, columnName),
       'RENAME TO',
-        this.generateSequence(newTable, newColumnName)
-    ].join(' ');
-
+      this.generateSequence(newTable, newColumnName)
+    ].join(' ')
   }
 
-  generateDropSequenceQuery(table, columnName) {
+  generateDropSequenceQuery (table, columnName) {
     return [
       'DROP SEQUENCE IF EXISTS',
       this.generateSequence(table, columnName)
-    ].join(' ');
+    ].join(' ')
   }
 
-  generateCreateTableQuery(table, columns) {
-
+  generateCreateTableQuery (table, columns) {
     // Create sequences along with table
-    let self = this;
+    let self = this
 
     return [
       super.generateCreateTableQuery(table, columns),
-      this.getAutoIncrementKeys(columns).map(function(columnData) {
+      this.getAutoIncrementKeys(columns).map(function (columnData) {
         return [
           self.generateCreateSequenceQuery(table, columnData.name),
           [
             'ALTER TABLE',
-              self.escapeField(table),
-              self.generateAlterColumnSetDefaultSeq(columnData.name, self.generateSequence(table, columnData.name))
+            self.escapeField(table),
+            self.generateAlterColumnSetDefaultSeq(columnData.name, self.generateSequence(table, columnData.name))
           ].join(' ')
-        ].join(';');
+        ].join(';')
       })
-    ].join(';');
-
+    ].join(';')
   }
 
-  generateLimitClause(limitObj) {
-
+  generateLimitClause (limitObj) {
     return (!limitObj) ? '' :
       (limitObj.count ? ` LIMIT ${limitObj.count}` : '') +
-      (limitObj.offset ? ` OFFSET ${limitObj.offset}` : '');
-
+      (limitObj.offset ? ` OFFSET ${limitObj.offset}` : '')
   }
 
-  preprocessWhereObj(table, whereObj) {
-
+  preprocessWhereObj (table, whereObj) {
     let whereObjArray = []
-    whereObj.forEach( where => {
+    whereObj.forEach(where => {
       if (utilities.isObject(where.value)) {
-        Object.keys(where.value).map( (k) => {
+        Object.keys(where.value).map((k) => {
           whereObjArray.push(Object.assign({}, where, {
             columnName: `${where.columnName}${this.whereDepthDelimiter}'${k}'`,
             value: where.value[k]
-          }));
-        });
+          }))
+        })
       } else {
-        whereObjArray.push(where);
+        whereObjArray.push(where)
       }
-    });
+    })
 
-    return whereObjArray;
-
+    return whereObjArray
   }
 
 }
 
 PostgresAdapter.prototype.sanitizeType = {
-  boolean: function(v) {
-    return ['f', 't'][v | 0];
+  boolean: function (v) {
+    return ['f', 't'][v | 0]
   },
-  json: function(v) {
-    return JSON.stringify(v);
+  json: function (v) {
+    return JSON.stringify(v)
   }
 }
 
-PostgresAdapter.prototype.escapeFieldCharacter = '"';
-PostgresAdapter.prototype.columnDepthDelimiter = '->';
-PostgresAdapter.prototype.whereDepthDelimiter = '->>';
+PostgresAdapter.prototype.escapeFieldCharacter = '"'
+PostgresAdapter.prototype.columnDepthDelimiter = '->'
+PostgresAdapter.prototype.whereDepthDelimiter = '->>'
 
 PostgresAdapter.prototype.indexTypes = [
   'btree',
   'hash',
   'gist',
   'gin'
-];
+]
 
 PostgresAdapter.prototype.documentTypes = [
   'json'
-];
+]
 
 PostgresAdapter.prototype.comparators = {
   is: field => `${field} = __VAR__`,
@@ -690,12 +597,12 @@ PostgresAdapter.prototype.comparators = {
   in: field => `ARRAY[${field}] <@ __VAR__`,
   not_in: field => `NOT (ARRAY[${field}] <@ __VAR__)`,
   json: (field, value) => {
-    return `${field.replace(/"/g,"")} = __VAR__`;
+    return `${field.replace(/"/g, '')} = __VAR__`
   },
   jsoncontains: (field) => {
-    return `${field.replace(/"/g,"")} ? __VAR__`;
+    return `${field.replace(/"/g, '')} ? __VAR__`
   }
-};
+}
 
 PostgresAdapter.prototype.types = {
   serial: {
@@ -730,8 +637,8 @@ PostgresAdapter.prototype.types = {
   json: {
     dbName: 'JSONB'
   }
-};
+}
 
-PostgresAdapter.prototype.supportsForeignKey = true;
+PostgresAdapter.prototype.supportsForeignKey = true
 
-module.exports = PostgresAdapter;
+module.exports = PostgresAdapter

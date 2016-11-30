@@ -1,27 +1,24 @@
-'use strict';
+'use strict'
 
-const fxn = require('fxn');
-const API = require('./api.js');
+const fxn = require('fxn')
+const API = require('./api.js')
 
 class Application extends fxn.Application {
 
-  constructor() {
-
-    super('Nodal');
-
+  constructor () {
+    super('Nodal')
   }
 
   /**
   * HTTP Error
   */
-  error(req, res, start, status, message, err) {
+  error (req, res, start, status, message, err) {
+    status = status || 500
+    message = message || 'Internal Server Error'
 
-    status = status || 500;
-    message = message || 'Internal Server Error';
+    let headers = {'Content-Type': 'application/json'}
 
-    let headers = {'Content-Type': 'application/json'};
-
-    err && console.log(err.stack);
+    err && console.log(err.stack)
 
     this.send(
       req,
@@ -39,10 +36,9 @@ class Application extends fxn.Application {
         2
       ),
       message
-    );
-
+    )
   }
 
 }
 
-module.exports = Application;
+module.exports = Application

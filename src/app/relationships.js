@@ -1,6 +1,6 @@
-'use strict';
+'use strict'
 
-const Nodal = require('nodal');
+const Nodal = require('nodal')
 
 /* Include this file to enable Model relationships */
 
@@ -13,4 +13,4 @@ const Nodal = require('nodal');
 
 */
 
-module.exports = {}; // Don't need to export anything
+module.exports = {} // Don't need to export anything

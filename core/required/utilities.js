@@ -1,1 +1,1 @@
-module.exports = require('fxn').utilities;
+module.exports = require('fxn').utilities

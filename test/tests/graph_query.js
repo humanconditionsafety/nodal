@@ -1,13 +1,11 @@
-'use strict';
+'use strict'
 
 module.exports = Nodal => {
-
-  const expect = require('chai').expect;
-  const async = require('async');
+  const expect = require('chai').expect
+  const async = require('async')
 
   describe('Graph Query', () => {
-
-    let db = new Nodal.Database();
+    let db = new Nodal.Database()
 
     let schemaUser = {
       table: 'users',
@@ -18,7 +16,7 @@ module.exports = Nodal => {
         {name: 'created_at', type: 'datetime'},
         {name: 'updated_at', type: 'datetime'}
       ]
-    };
+    }
 
     let schemaThread = {
       table: 'threads',
@@ -29,7 +27,7 @@ module.exports = Nodal => {
         {name: 'created_at', type: 'datetime'},
         {name: 'updated_at', type: 'datetime'}
       ]
-    };
+    }
 
     let schemaPost = {
       table: 'posts',
@@ -41,7 +39,7 @@ module.exports = Nodal => {
         {name: 'created_at', type: 'datetime'},
         {name: 'updated_at', type: 'datetime'}
       ]
-    };
+    }
 
     let schemaVote = {
       table: 'votes',
@@ -53,47 +51,45 @@ module.exports = Nodal => {
         {name: 'created_at', type: 'datetime'},
         {name: 'updated_at', type: 'datetime'}
       ]
-    };
+    }
 
     class User extends Nodal.Model {}
 
-    User.setDatabase(db);
-    User.setSchema(schemaUser);
+    User.setDatabase(db)
+    User.setSchema(schemaUser)
 
     class Thread extends Nodal.Model {}
 
-    Thread.setDatabase(db);
-    Thread.setSchema(schemaThread);
-    Thread.joinsTo(User, {multiple: true});
+    Thread.setDatabase(db)
+    Thread.setSchema(schemaThread)
+    Thread.joinsTo(User, {multiple: true})
 
     class Post extends Nodal.Model {}
 
-    Post.setDatabase(db);
-    Post.setSchema(schemaPost);
-    Post.joinsTo(User, {multiple: true});
-    Post.joinsTo(Thread, {multiple: true});
+    Post.setDatabase(db)
+    Post.setSchema(schemaPost)
+    Post.joinsTo(User, {multiple: true})
+    Post.joinsTo(Thread, {multiple: true})
 
     class Vote extends Nodal.Model {};
 
-    Vote.setDatabase(db);
-    Vote.setSchema(schemaVote);
-    Vote.joinsTo(User, {multiple: true});
-    Vote.joinsTo(Thread, {multiple: true});
+    Vote.setDatabase(db)
+    Vote.setSchema(schemaVote)
+    Vote.joinsTo(User, {multiple: true})
+    Vote.joinsTo(Thread, {multiple: true})
 
-    before(function(done) {
-
-      db.connect(Nodal.my.Config.db.main);
+    before(function (done) {
+      db.connect(Nodal.my.Config.db.main)
 
       db.transaction(
         [schemaUser, schemaThread, schemaPost, schemaVote].map(schema => {
           return [
             db.adapter.generateDropTableQuery(schema.table, true),
             db.adapter.generateCreateTableQuery(schema.table, schema.columns)
-          ].join(';');
+          ].join(';')
         }).join(';'),
-        function(err, result) {
-
-          expect(err).to.equal(null);
+        function (err, result) {
+          expect(err).to.equal(null)
 
           let users = [
             'Alpha',
@@ -102,42 +98,38 @@ module.exports = Nodal => {
           ].map((username, i) => new User({
             username: username,
             skill: ['JavaScript', 'Python', 'Ruby'][i % 3]
-          }));
+          }))
 
-          users = Nodal.ModelArray.from(users);
+          users = Nodal.ModelArray.from(users)
 
           users.forEach((user, i) => {
-
-            let uid = i + 1;
+            let uid = i + 1
 
             let threads = [
               'Hello, World',
               'I like turtles',
               'Upvote this pls'
-            ].map((title) => new Thread({title: title, user_id: uid}));
+            ].map((title) => new Thread({title: title, user_id: uid}))
 
-            user.setJoined('threads', Nodal.ModelArray.from(threads));
+            user.setJoined('threads', Nodal.ModelArray.from(threads))
 
-            let posts = [];
-            let votes = [];
-            let n = 27;
+            let posts = []
+            let votes = []
+            let n = 27
             while (n--) {
-              posts.push({user_id: uid, thread_id: n % 9, body: 'Random Post ' + String.fromCharCode(65 + n)});
-              votes.push({user_id: uid, thread_id: n % 9, weight: [1, -1][n & 1]});
+              posts.push({user_id: uid, thread_id: n % 9, body: 'Random Post ' + String.fromCharCode(65 + n)})
+              votes.push({user_id: uid, thread_id: n % 9, weight: [1, -1][n & 1]})
             }
 
-            posts = posts.map(post => new Post(post));
-            votes = votes.map(vote => new Vote(vote));
+            posts = posts.map(post => new Post(post))
+            votes = votes.map(vote => new Vote(vote))
 
-            user.setJoined('posts', Nodal.ModelArray.from(posts));
-            user.setJoined('votes', Nodal.ModelArray.from(votes));
-
-
-          });
+            user.setJoined('posts', Nodal.ModelArray.from(posts))
+            user.setJoined('votes', Nodal.ModelArray.from(votes))
+          })
 
           users.saveAll(err => {
-
-            expect(err).to.equal(null);
+            expect(err).to.equal(null)
 
             async.series(
               [].concat(
@@ -145,32 +137,24 @@ module.exports = Nodal => {
                 users.map(u => u.joined('posts').saveAll.bind(u.joined('posts'))),
                 users.map(u => u.joined('votes').saveAll.bind(u.joined('votes')))
               ), (err) => {
-
-                expect(err).to.not.exist;
-                done();
-
-              }
-            );
-
-          });
-
+              expect(err).to.not.exist
+              done()
+            }
+            )
+          })
         }
-      );
+      )
+    })
 
-    });
+    after(function (done) {
+      db.close(function () {
+        done()
+      })
+    })
 
-    after(function(done) {
+    const GraphQuery = Nodal.GraphQuery
 
-      db.close(function() {
-        done();
-      });
-
-    });
-
-    const GraphQuery = Nodal.GraphQuery;
-
-    it ('should parse properly', () => {
-
+    it('should parse properly', () => {
       let queries = [
         'parent { id, name, age, children { id, name }, shirt }',
         'parent{id,name,age,children{id,name},shirt}',
@@ -180,95 +164,75 @@ module.exports = Nodal => {
         'parent{id,name,age,shirt,children{id,name}}',
         ' parent  { id , name , age , shirt , children { id , name } }',
         'parent(id: 20, name: 30) { id, name, age, shirt, children(name: "Suzanne") { id , name } }'
-      ];
+      ]
 
       queries.forEach(query => {
+        query = GraphQuery.parse(query)
+        let structure = query.structure
 
-        query = GraphQuery.parse(query);
-        let structure = query.structure;
-
-        expect(structure).to.have.ownProperty('parent');
-        expect(structure.parent).to.contain('id', 'name', 'age', 'shirt');
-        expect(structure.parent.filter(p => typeof p === 'object').pop()).to.have.ownProperty('children');
-        expect(structure.parent.filter(p => typeof p === 'object').pop().children).to.contain('id', 'name');
-
-      });
-
-    });
+        expect(structure).to.have.ownProperty('parent')
+        expect(structure.parent).to.contain('id', 'name', 'age', 'shirt')
+        expect(structure.parent.filter(p => typeof p === 'object').pop()).to.have.ownProperty('children')
+        expect(structure.parent.filter(p => typeof p === 'object').pop().children).to.contain('id', 'name')
+      })
+    })
 
     it('Should query users properly', (done) => {
-
       new GraphQuery('users { id, username }', 0, User).query((err, models, format) => {
+        let users = models.toObject(format)
 
-        let users = models.toObject(format);
-
-        expect(users.length).to.equal(3);
-        expect(users[0]).to.have.ownProperty('id');
-        expect(users[0]).to.have.ownProperty('username');
-        done();
-
-      });
-
-    });
+        expect(users.length).to.equal(3)
+        expect(users[0]).to.have.ownProperty('id')
+        expect(users[0]).to.have.ownProperty('username')
+        done()
+      })
+    })
 
     it('Should query users properly, join threads', (done) => {
-
       new GraphQuery('users { id, username, threads { id } }', 0, User).query((err, models, format) => {
+        let users = models.toObject(format)
 
-        let users = models.toObject(format);
-
-        expect(users.length).to.equal(3);
-        expect(users[0]).to.have.ownProperty('id');
-        expect(users[0]).to.have.ownProperty('username');
-        expect(users[0]).to.have.ownProperty('threads');
-        expect(users[0].threads[0]).to.have.ownProperty('id');
-        done();
-
-      });
-
-    });
+        expect(users.length).to.equal(3)
+        expect(users[0]).to.have.ownProperty('id')
+        expect(users[0]).to.have.ownProperty('username')
+        expect(users[0]).to.have.ownProperty('threads')
+        expect(users[0].threads[0]).to.have.ownProperty('id')
+        done()
+      })
+    })
 
     it('Should query users properly with where, join threads', (done) => {
-
       new GraphQuery('users(id: 1) { id, username, threads { id } }', 0, User).query((err, models, format) => {
+        let users = models.toObject(format)
 
-        let users = models.toObject(format);
-
-        expect(users.length).to.equal(1);
-        expect(users[0].id).to.equal(1);
-        expect(users[0]).to.have.ownProperty('id');
-        expect(users[0]).to.have.ownProperty('username');
-        expect(users[0]).to.have.ownProperty('threads');
-        expect(users[0].threads.length).to.equal(3);
-        expect(users[0].threads[0]).to.have.ownProperty('id');
-        done();
-
-      });
-
-    });
+        expect(users.length).to.equal(1)
+        expect(users[0].id).to.equal(1)
+        expect(users[0]).to.have.ownProperty('id')
+        expect(users[0]).to.have.ownProperty('username')
+        expect(users[0]).to.have.ownProperty('threads')
+        expect(users[0].threads.length).to.equal(3)
+        expect(users[0].threads[0]).to.have.ownProperty('id')
+        done()
+      })
+    })
 
     it('Should query users properly with where, join threads with where', (done) => {
-
       new GraphQuery('users(id: 1) { id, username, threads(id: 2) { id } }', 0, User).query((err, models, format) => {
+        let users = models.toObject(format)
 
-        let users = models.toObject(format);
-
-        expect(users.length).to.equal(1);
-        expect(users[0].id).to.equal(1);
-        expect(users[0]).to.have.ownProperty('id');
-        expect(users[0]).to.have.ownProperty('username');
-        expect(users[0]).to.have.ownProperty('threads');
-        expect(users[0].threads.length).to.equal(1);
-        expect(users[0].threads[0]).to.have.ownProperty('id');
-        expect(users[0].threads[0].id).to.equal(2);
-        done();
-
-      });
-
-    });
+        expect(users.length).to.equal(1)
+        expect(users[0].id).to.equal(1)
+        expect(users[0]).to.have.ownProperty('id')
+        expect(users[0]).to.have.ownProperty('username')
+        expect(users[0]).to.have.ownProperty('threads')
+        expect(users[0].threads.length).to.equal(1)
+        expect(users[0].threads[0]).to.have.ownProperty('id')
+        expect(users[0].threads[0].id).to.equal(2)
+        done()
+      })
+    })
 
     it('Should query users properly with where, join threads with where, add posts', (done) => {
-
       new GraphQuery(`
         users(id: 1) {
           id,
@@ -284,31 +248,27 @@ module.exports = Nodal => {
           }
         }
       `, 0, User).query((err, models, format) => {
+        let users = models.toObject(format)
 
-        let users = models.toObject(format);
-
-        expect(users.length).to.equal(1);
-        expect(users[0].id).to.equal(1);
-        expect(users[0]).to.have.ownProperty('id');
-        expect(users[0]).to.have.ownProperty('username');
-        expect(users[0]).to.have.ownProperty('threads');
-        expect(users[0]).to.have.ownProperty('posts');
-        expect(users[0].threads.length).to.equal(1);
-        expect(users[0].threads[0]).to.have.ownProperty('id');
-        expect(users[0].threads[0]).to.have.ownProperty('posts');
-        expect(users[0].threads[0].id).to.equal(2);
-        expect(users[0].threads[0].posts.length).to.equal(9);
-        expect(users[0].threads[0].posts[0]).to.have.ownProperty('body');
-        expect(users[0].posts.length).to.equal(27);
-        expect(users[0].posts[0]).to.have.ownProperty('body');
-        done();
-
-      });
-
-    });
+        expect(users.length).to.equal(1)
+        expect(users[0].id).to.equal(1)
+        expect(users[0]).to.have.ownProperty('id')
+        expect(users[0]).to.have.ownProperty('username')
+        expect(users[0]).to.have.ownProperty('threads')
+        expect(users[0]).to.have.ownProperty('posts')
+        expect(users[0].threads.length).to.equal(1)
+        expect(users[0].threads[0]).to.have.ownProperty('id')
+        expect(users[0].threads[0]).to.have.ownProperty('posts')
+        expect(users[0].threads[0].id).to.equal(2)
+        expect(users[0].threads[0].posts.length).to.equal(9)
+        expect(users[0].threads[0].posts[0]).to.have.ownProperty('body')
+        expect(users[0].posts.length).to.equal(27)
+        expect(users[0].posts[0]).to.have.ownProperty('body')
+        done()
+      })
+    })
 
     it('Should join in mutiple tables on joined table', (done) => {
-
       new GraphQuery(`
         users {
           id,
@@ -320,27 +280,22 @@ module.exports = Nodal => {
           }
         }
       `, 0, User).query((err, models, format) => {
+        let users = models.toObject(format)
 
-        let users = models.toObject(format);
+        expect(err).to.not.exist
 
-        expect(err).to.not.exist;
-
-        expect(users.length).to.equal(3);
-        expect(users[0]).to.have.ownProperty('id');
-        expect(users[0]).to.have.ownProperty('username');
-        expect(users[0]).to.have.ownProperty('threads');
-        expect(users[0].threads.length).to.equal(3);
-        expect(users[0].threads[0]).to.have.ownProperty('id');
-        expect(users[0].threads[0]).to.have.ownProperty('posts');
-        expect(users[0].threads[0]).to.have.ownProperty('votes');
-        expect(users[0].threads[0].posts.length).to.equal(9);
-        expect(users[0].threads[0].votes.length).to.equal(9);
-        done();
-
-      });
-
-    });
-
-  });
-
-};
+        expect(users.length).to.equal(3)
+        expect(users[0]).to.have.ownProperty('id')
+        expect(users[0]).to.have.ownProperty('username')
+        expect(users[0]).to.have.ownProperty('threads')
+        expect(users[0].threads.length).to.equal(3)
+        expect(users[0].threads[0]).to.have.ownProperty('id')
+        expect(users[0].threads[0]).to.have.ownProperty('posts')
+        expect(users[0].threads[0]).to.have.ownProperty('votes')
+        expect(users[0].threads[0].posts.length).to.equal(9)
+        expect(users[0].threads[0].votes.length).to.equal(9)
+        done()
+      })
+    })
+  })
+}

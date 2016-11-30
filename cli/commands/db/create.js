@@ -1,36 +1,29 @@
 
+'use strict'
 
-'use strict';
-
-const Command = require('cmnd').Command;
+const Command = require('cmnd').Command
 
 class DBCreateCommand extends Command {
 
-  constructor() {
-
-    super('db', 'create');
-
+  constructor () {
+    super('db', 'create')
   }
 
-  help() {
-
+  help () {
     return {
       description: 'Create a new PostgreSQL database for the current project'
-    };
-
+    }
   }
 
-  run(params, callback) {
-
+  run (params, callback) {
     if (params.vflags.env) {
-      process.env.NODE_ENV = params.vflags.env[0];
+      process.env.NODE_ENV = params.vflags.env[0]
     }
 
-    const bootstrapper = require('../../../core/my/bootstrapper.js');
-    bootstrapper.create(callback);
-
+    const bootstrapper = require('../../../core/my/bootstrapper.js')
+    bootstrapper.create(callback)
   }
 
 }
 
-module.exports = DBCreateCommand;
+module.exports = DBCreateCommand

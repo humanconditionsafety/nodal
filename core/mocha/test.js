@@ -1,31 +1,25 @@
-'use strict';
+'use strict'
 
-const EndpointRequest = require('./endpoint_request.js');
+const EndpointRequest = require('./endpoint_request.js')
 
 class Test {
 
-  constructor(testRunner) {
-
-    this.testRunner = testRunner;
-    Object.defineProperty(this, 'router', {get: () => this.testRunner.router});
-
+  constructor (testRunner) {
+    this.testRunner = testRunner
+    Object.defineProperty(this, 'router', {get: () => this.testRunner.router})
   }
 
-  __test__(verb) {
-
+  __test__ (verb) {
     describe(this.constructor.name, () => {
+      this.before && before(this.before.bind(this, verb))
 
-      this.before && before(this.before.bind(this, verb));
+      this.test(verb)
 
-      this.test(verb);
-
-      this.after && after(this.after.bind(this, verb));
-
-    });
-
+      this.after && after(this.after.bind(this, verb))
+    })
   }
 
-  test() {}
+  test () {}
 
   /**
   * Creates a new MockRequest object (emulates an HTTP request)
@@ -33,12 +27,10 @@ class Test {
   * @param {Object} query The query parameters you wish to pass
   * @return {Nodal.EndpointRequest}
   */
-  endpoint(path, query) {
-
-    return new EndpointRequest(this.router, path, query);
-
+  endpoint (path, query) {
+    return new EndpointRequest(this.router, path, query)
   }
 
 }
 
-module.exports = Test;
+module.exports = Test

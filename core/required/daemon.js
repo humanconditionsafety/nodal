@@ -1,8 +1,8 @@
-'use strict';
+'use strict'
 
-const fxn = require('fxn');
+const fxn = require('fxn')
 
-const API = require('./api.js');
+const API = require('./api.js')
 
 /**
 * Multi-process HTTP Daemon that resets when files changed (in development)
@@ -10,15 +10,12 @@ const API = require('./api.js');
 */
 class Daemon extends fxn.Daemon {
 
-  constructor() {
-
-    super('Nodal');
-
+  constructor () {
+    super('Nodal')
   }
 
-  error(req, res, err) {
-
-    res.writeHead(500, {'Content-Type': 'text/plain'});
+  error (req, res, err) {
+    res.writeHead(500, {'Content-Type': 'text/plain'})
 
     res.end(
       JSON.stringify(
@@ -30,10 +27,9 @@ class Daemon extends fxn.Daemon {
         null,
         2
       )
-    );
-
+    )
   }
 
 }
 
-module.exports = Daemon;
+module.exports = Daemon

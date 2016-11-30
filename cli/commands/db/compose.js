@@ -1,30 +1,24 @@
-'use strict';
+'use strict'
 
-const Command = require('cmnd').Command;
+const Command = require('cmnd').Command
 
 class DBBootstrapCommand extends Command {
 
-  constructor() {
-
-    super('db', 'compose');
-
+  constructor () {
+    super('db', 'compose')
   }
 
-  help() {
-
+  help () {
     return {
-      description: 'Runs db:prepare, db:migrate, db:seed',
-    };
-
+      description: 'Runs db:prepare, db:migrate, db:seed'
+    }
   }
 
-  run(params, callback) {
-
-    const bootstrapper = require('../../../core/my/bootstrapper.js');
-    bootstrapper.compose(callback);
-
+  run (params, callback) {
+    const bootstrapper = require('../../../core/my/bootstrapper.js')
+    bootstrapper.compose(callback)
   }
 
 }
 
-module.exports = DBBootstrapCommand;
+module.exports = DBBootstrapCommand

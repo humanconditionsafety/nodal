@@ -1,6 +1,6 @@
-'use strict';
+'use strict'
 
-const fxn = require('fxn');
+const fxn = require('fxn')
 
 /**
 * Use to delegate tasks minutely, hourly, daily, or weekly.
@@ -8,4 +8,4 @@ const fxn = require('fxn');
 */
 class Scheduler extends fxn.Scheduler {}
 
-module.exports = Scheduler;
+module.exports = Scheduler

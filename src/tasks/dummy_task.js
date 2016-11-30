@@ -1,16 +1,14 @@
-'use strict';
+'use strict'
 
-const Nodal = require('nodal');
+const Nodal = require('nodal')
 
 class DummyTask {
 
-  exec(args, callback) {
-
-    console.log('Dummy task executed');
-    callback();
-
+  exec (args, callback) {
+    console.log('Dummy task executed')
+    callback()
   }
 
 }
 
-module.exports = DummyTask;
+module.exports = DummyTask

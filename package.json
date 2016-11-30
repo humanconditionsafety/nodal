@@ -11,6 +11,13 @@
     "modular",
     "nodal"
   ],
+  "standard": {
+    "ignore": [
+      "test/**",
+      "src/test/**",
+      "tmp.js"
+    ]
+  },
   "author": "Keith Horwood",
   "main": "core/module.js",
   "dependencies": {
